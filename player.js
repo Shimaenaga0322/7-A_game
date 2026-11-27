@@ -8,10 +8,10 @@
 const GRAVITY = 2000;
 const JUMP_SPEED = 700;
 const MOVE_SPEED = 240;
-const MAX_JUMPS = 2;          // 地面を離れてから跳べる回数（2段ジャンプ）
-const FALL_GRAVITY_RATE = 2;  // 落ちるときは、重力を何倍にするか
-const MAX_HP = 3;             // HPの最大
-const HIT_TIME = 1;           // 当たってから、当たらない時間（秒）
+const MAX_JUMPS = 2;
+const FALL_GRAVITY_RATE = 2;
+const MAX_HP = 3;
+const HIT_TIME = 1;
 
 // ------------------------------
 // 状態ごとの色
@@ -41,7 +41,8 @@ const player = {
   frameIndex: 0,
   frameTimer: 0,
   hp: MAX_HP,
-  hitTimer: 0
+  hitTimer: 0,
+  facing: 1              // ★追加：最初は右向き
 };
 
 // コマを並べた画像（1コマ 32×32）
@@ -77,6 +78,43 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("keyup", (e) => {
   keys[e.code] = false;
 });
+
+// ------------------------------
+// プレイヤーを初期状態に戻す
+// ★追加した関数
+// ------------------------------
+
+function resetPlayer() {
+
+  // 位置を初期状態に戻す
+  player.x = 80;
+  player.y = 20;
+
+  // 移動速度をリセット
+  player.vx = 0;
+  player.vy = 0;
+
+  // ジャンプ状態をリセット
+  player.isGrounded = false;
+  player.jumpsLeft = MAX_JUMPS;
+
+  // アニメーションをリセット
+  player.state = "idle";
+  player.frameIndex = 0;
+  player.frameTimer = 0;
+
+  // HPと無敵時間をリセット
+  player.hp = MAX_HP;
+  player.hitTimer = 0;
+
+  // 向きを右に戻す
+  player.facing = 1;
+
+  // 押されているキーをリセット
+  for (const key in keys) {
+    keys[key] = false;
+  }
+}
 
 // ------------------------------
 // 床との衝突判定
@@ -131,18 +169,16 @@ function updatePlayer(dt) {
   }
 
   // 横方向の移動
+  player.x = player.x + player.vx * dt;
+
   // 向き：動いているときだけ変える
-  // 横方向の移動
-player.x = player.x + player.vx * dt;
+  if (player.vx > 0) {
+    player.facing = 1;
+  }
 
-// 向き：動いているときだけ変える
-if (player.vx > 0) {
-  player.facing = 1;    // 右
-}
-
-if (player.vx < 0) {
-  player.facing = -1;   // 左
-}
+  if (player.vx < 0) {
+    player.facing = -1;
+  }
 
   // 重力による落下
   const g = player.vy > 0
@@ -156,17 +192,16 @@ if (player.vx < 0) {
   collideWithFloor();
 
   // 現在の状態を決める
-  // 状態が変わったら、コマを最初に戻す
   const newState = decideState();
 
+  // 状態が変わったら、コマを最初に戻す
   if (newState !== player.state) {
     player.state = newState;
     player.frameIndex = 0;
     player.frameTimer = 0;
   }
 
-  // コマ送り（タイマーの形）
-  // コマの数は、今の状態のもの
+  // コマ送り
   player.frameTimer = player.frameTimer + dt;
 
   if (player.frameTimer >= FRAME_TIME) {
@@ -174,9 +209,14 @@ if (player.vx < 0) {
     player.frameTimer = 0;
   }
 
-  // 当たらない時間（タイマーの形・続ける）
+  // 当たらない時間（タイマー）
   if (player.hitTimer > 0) {
     player.hitTimer = player.hitTimer - dt;
+
+    // マイナスにならないようにする
+    if (player.hitTimer < 0) {
+      player.hitTimer = 0;
+    }
   }
 }
 

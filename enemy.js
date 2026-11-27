@@ -3,6 +3,8 @@
 // 敵を作る関数
 // ========================================
 
+const MAX_ENEMIES = 6;   // 敵は、同時にこの数まで
+
 function createEnemy(x, vx, type = "normal", startY = null) {
   const y = startY ?? floor.y - 32;
 
@@ -55,17 +57,50 @@ function createEnemy(x, vx, type = "normal", startY = null) {
 // ========================================
 
 let enemies = [];
+let spawnTimer = 0;   // 敵を出すタイマー
+let nextSpawn = 2;    // 次の敵を出すまでの時間（秒）
 
-// 通常敵
-enemies.push(createEnemy(200, 80));
-enemies.push(createEnemy(380, -120));
-enemies.push(createEnemy(540, 60));
 
-// ジャンプ敵
-enemies.push(createEnemy(300, 0, "jumper"));
+// ========================================
+// 敵を初期状態に戻す
+// ========================================
 
-// 空中敵
-enemies.push(createEnemy(450, 60, "flyer", 100));
+function resetEnemies() {
+
+  // ★重要：以前の敵をすべて消す
+  enemies = [];
+
+  // 通常敵
+  enemies.push(createEnemy(200, 80));
+  enemies.push(createEnemy(380, -120));
+  enemies.push(createEnemy(540, 60));
+
+  // ジャンプ敵
+  enemies.push(createEnemy(300, 0, "jumper"));
+
+  // 空中敵
+  enemies.push(createEnemy(450, 60, "flyer", 100));
+  enemies.push(createEnemy(50, 70, "flyer", 40));
+    spawnTimer = 0;
+  nextSpawn = 2;
+}
+
+// 敵を時間で出す（タイマーの形・くり返す）
+function spawnEnemies(dt) {
+  spawnTimer = spawnTimer + dt;
+  if (spawnTimer >= nextSpawn) {
+    if (enemies.length < MAX_ENEMIES) {
+      // 左の端か右の端か、くじで決める
+      if (Math.random() < 0.5) {
+        enemies.push(createEnemy(0, 100));                    // 左の端から、右へ
+      } else {
+        enemies.push(createEnemy(canvas.width - 32, -100));   // 右の端から、左へ
+      }
+    }
+    spawnTimer = 0;
+    nextSpawn = 1 + Math.random() * 2;   // 次は 1〜3 秒のどれか
+  }
+}
 
 
 // ========================================
@@ -325,7 +360,7 @@ function collideWithEnemies(prevBottom) {
     ) {
       enemy.alive = false;
       player.vy = -JUMP_SPEED / 2;
-
+      score = score + 1;              // 点数を足す（★ main.js の score を書き換える）
     }
 
     // 横からぶつかった場合
